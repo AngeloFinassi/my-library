@@ -1,0 +1,26 @@
+{
+  "name": "my-library",
+  "version": "1.0.0",
+  "description": "catalog website",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npm run dev --workspaces --if-present"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AngeloFinassi/my-library.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AngeloFinassi/my-library/issues"
+  },
+  "homepage": "https://github.com/AngeloFinassi/my-library#readme",
+    "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module"
+}
