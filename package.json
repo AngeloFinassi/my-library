@@ -18,9 +18,14 @@
     "url": "https://github.com/AngeloFinassi/my-library/issues"
   },
   "homepage": "https://github.com/AngeloFinassi/my-library#readme",
-    "workspaces": [
+  "workspaces": [
     "apps/*",
     "packages/*"
   ],
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^18.0.5",
+    "mongodb": "^7.7.0",
+    "uuid": "^14.0.2"
+  }
 }
