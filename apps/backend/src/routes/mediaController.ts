@@ -2,13 +2,15 @@ import express from "express";
 import mediaService from "../services/mediaService.ts";
 import {
     NewMediaSchema,
-    UpdatedMediaSchema
+    UpdatedMediaSchema,
+    filterMediaSchema
 } from "../types/Media.ts";
 
 const router = express.Router();
 
-router.get("/", async (_req, res) => {
-    const media = await mediaService.getMidias();
+router.get("/", async (req, res) => {
+    const query = filterMediaSchema.parse(req.query);
+    const media = await mediaService.getMidias(query);
     res.json(media);
 });
 

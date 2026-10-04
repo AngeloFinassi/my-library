@@ -15,6 +15,33 @@ const objectIdSchema = z.custom<ObjectId>((value) => value instanceof ObjectId, 
     message: "Expected a Mongo ObjectId"
 });
 
+export type RatingQuery = number | {
+    $gte?: number;
+    $lte?: number;
+};
+
+export type MediaQuery = {
+    type?: string;
+    genre?: string;
+    rating?: number | RatingQuery;
+}
+
+export const ratingFilterSchema = z.object({
+    rating: z.coerce.number().optional(),
+    minRating: z.coerce.number().optional(),
+    maxRating: z.coerce.number().optional(),
+});
+
+export type RatingFilterSchema = z.infer<typeof ratingFilterSchema>
+
+export const filterMediaSchema = z.object({
+    type: z.enum(mediaTypes).optional(),
+    genre: z.string().optional(),
+    ...ratingFilterSchema.shape
+});
+
+export type FilterMediaSchema = z.infer<typeof filterMediaSchema>;
+
 const baseMediaSchema = z.object({
     title: z.string(),
     type: z.enum(mediaTypes),

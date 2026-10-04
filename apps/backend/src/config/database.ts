@@ -16,4 +16,6 @@ if (!uri) {
 
 const client = new MongoClient(uri);
 
+await client.connect();
+
 export const database = client.db("my-library");

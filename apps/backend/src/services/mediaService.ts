@@ -4,7 +4,10 @@ import {
     MediaSchema,
     NewMediaSchema,
     UpdatedMediaSchema,
-    DeleteMediaSchema
+    DeleteMediaSchema,
+    FilterMediaSchema,
+    RatingQuery,
+    MediaQuery
 } from "../types/Media.ts";
 
 const mediaCollection = database.collection("media");
@@ -17,8 +20,9 @@ const toObjectId = (id: string): ObjectId => {
     return new ObjectId(id);
 };
 
-const getMidias = async (): Promise<MediaSchema[]> => {
-    const result = await mediaCollection.find({}).toArray();
+const getMidias = async (filters: FilterMediaSchema): Promise<MediaSchema[]> => {
+    const query: MediaQuery = buildFilterQuery(filters);
+    const result = await mediaCollection.find(query).toArray();
     return result.map((item) => MediaSchema.parse(item));
 };
 
@@ -66,6 +70,42 @@ const deleteMedia = async (id: string): Promise<DeleteMediaSchema> => {
 
     return DeleteMediaSchema.parse(doc);
 };
+
+const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
+    const query: MediaQuery = {};
+    const ratingFilter: RatingQuery = {};
+
+    if (filters.type) {
+        query.type = filters.type;
+    }
+
+    if (filters.genre) {
+        query.genre = filters.genre;
+    }
+    
+    if (filters.rating !== undefined) {
+        query.rating = filters.rating;
+    }
+
+    if (filters.maxRating !== undefined) {
+        ratingFilter.$lte = filters.maxRating;
+    }
+
+    if (filters.minRating !== undefined) {
+        ratingFilter.$gte = filters.minRating;
+    }
+
+    if (filters.rating !== undefined) {
+        query.rating = filters.rating;
+        return query;
+    }
+
+    if (ratingFilter.$gte !== undefined || ratingFilter.$lte !== undefined) {
+        query.rating = ratingFilter;
+    }
+
+    return query;
+}
 
 export default {
     getMidias,
