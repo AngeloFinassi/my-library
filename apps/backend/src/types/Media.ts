@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 
-const LIMIT_DEFAULT = 10;
+const LIMIT_DEFAULT = 20;
 const OFFSET_DEFAULT = 0;
 
 const mediaTypes = [
@@ -30,6 +30,18 @@ export type RatingQuery = {
     $lte?: number;
 };
 
+type RegexQuery = {
+    $regex: string;
+    $options: string;
+}
+
+type FieldRegex = {
+    title?: RegexQuery;
+    description?: RegexQuery;
+    annotation?: RegexQuery;
+    genre?: RegexQuery;
+}
+
 export type MediaQuery = {
     type?: string;
     genre?: string;
@@ -38,6 +50,17 @@ export type MediaQuery = {
     finishedAt?: Date;
     createdAt?: Date;
     updatedAt?: Date;
+    $or?: FieldRegex[]
+}
+
+export type MediaListResponse = {
+    data: MediaSchema[];
+    filters: FilterMediaSchema;
+    pagination: {
+        limit: number;
+        offset: number;
+        total: number;
+    };
 }
 
 export const ratingFilterSchema = z.object({
@@ -63,6 +86,7 @@ export const paginationSchema = z.object({
 export const filterMediaSchema = z.object({
     type: z.enum(mediaTypes).optional(),
     genre: z.string().optional(),
+    search: z.string().optional(),
     ...ratingFilterSchema.shape,
     ...paginationSchema.shape
 });

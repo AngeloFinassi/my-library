@@ -2,6 +2,7 @@ import { database } from "../config/database.ts";
 import { ObjectId } from "mongodb";
 import {
     MediaSchema,
+    MediaListResponse,
     NewMediaSchema,
     UpdatedMediaSchema,
     DeleteMediaSchema,
@@ -21,8 +22,9 @@ const toObjectId = (id: string): ObjectId => {
     return new ObjectId(id);
 };
 
-const getMidias = async (filters: FilterMediaSchema): Promise<MediaSchema[]> => {
+const getMidias = async (filters: FilterMediaSchema): Promise<MediaListResponse> => {
     const query: MediaQuery = buildFilterQuery(filters);
+
     const { limit, offset } = filters;
 
     const result = await mediaCollection
@@ -31,7 +33,19 @@ const getMidias = async (filters: FilterMediaSchema): Promise<MediaSchema[]> => 
         .limit(limit)
         .toArray();
 
-    return result.map((item) => MediaSchema.parse(item));
+    const total = await mediaCollection.countDocuments(query);
+    const data = result.map((item) => MediaSchema.parse(item));
+
+    return {
+        data,
+        filters,
+        pagination: {
+            limit,
+            offset,
+            total
+        }
+
+    }
 };
 
 const getMediaById = async (id: string): Promise<MediaSchema> => {
@@ -126,6 +140,35 @@ const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
 
     if (filters.updatedAt) {
         query.updatedAt = filters.updatedAt;
+    }
+
+    if (filters.search) {
+        query.$or = [
+            {
+                title: {
+                    $regex: filters.search,
+                    $options: "i"
+                }
+            },
+            {
+                description: {
+                    $regex: filters.search,
+                    $options: "i"
+                }
+            },
+            {
+                annotation: {
+                    $regex: filters.search,
+                    $options: "i"
+                }
+            },
+            {
+                genre: {
+                    $regex: filters.search,
+                    $options: "i"
+                }
+            }
+        ];
     }
 
     if (filters.rating !== undefined) {
