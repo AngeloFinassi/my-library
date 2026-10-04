@@ -1,6 +1,7 @@
 import express from "express";
 
 import mediaController from "./routes/mediaController.ts"
+import { execeptionHandler } from "./middleware/exceptionHandler.ts";
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.get("/ping", (_req, res) => {
 })
 
 app.use('/media', mediaController)
+
+app.use(execeptionHandler);
 
 const PORT = 3000;
 
