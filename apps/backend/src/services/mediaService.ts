@@ -7,7 +7,8 @@ import {
     DeleteMediaSchema,
     FilterMediaSchema,
     RatingQuery,
-    MediaQuery
+    MediaQuery,
+    NewMediaSchemasArray
 } from "../types/Media.ts";
 
 const mediaCollection = database.collection("media");
@@ -22,7 +23,14 @@ const toObjectId = (id: string): ObjectId => {
 
 const getMidias = async (filters: FilterMediaSchema): Promise<MediaSchema[]> => {
     const query: MediaQuery = buildFilterQuery(filters);
-    const result = await mediaCollection.find(query).toArray();
+    const { limit, offset } = filters;
+
+    const result = await mediaCollection
+        .find(query)
+        .skip(offset)
+        .limit(limit)
+        .toArray();
+
     return result.map((item) => MediaSchema.parse(item));
 };
 
@@ -44,6 +52,15 @@ const createMedia = async (media: NewMediaSchema): Promise<MediaSchema> => {
         ...media
     });
 };
+
+const createBulkMidia = async (mediaArray: NewMediaSchemasArray): Promise<MediaSchema[]> => {
+    const result = await mediaCollection.insertMany(mediaArray);
+
+    return mediaArray.map((media, index) => MediaSchema.parse({
+        _id: result.insertedIds[index],
+        ...media
+    }));
+}
 
 const updateMedia = async (media: UpdatedMediaSchema): Promise<MediaSchema> => {
     const { _id, ...mediaData } = media;
@@ -95,6 +112,22 @@ const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
         ratingFilter.$gte = filters.minRating;
     }
 
+    if (filters.status) {
+        query.status = filters.status;
+    }
+
+    if (filters.finishedAt) {
+        query.finishedAt = filters.finishedAt;
+    }
+
+    if (filters.createdAt) {
+        query.createdAt = filters.createdAt;
+    }
+
+    if (filters.updatedAt) {
+        query.updatedAt = filters.updatedAt;
+    }
+
     if (filters.rating !== undefined) {
         query.rating = filters.rating;
         return query;
@@ -112,5 +145,6 @@ export default {
     getMediaById,
     createMedia,
     updateMedia,
-    deleteMedia
+    deleteMedia,
+    createBulkMidia
 };
