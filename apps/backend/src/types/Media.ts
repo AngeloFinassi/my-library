@@ -44,7 +44,7 @@ type FieldRegex = {
 
 export type MediaQuery = {
     type?: string;
-    genre?: string;
+    genre?: string[] | string | RegexQuery;
     rating?: number | RatingQuery;
     status?: string;
     finishedAt?: Date;
@@ -62,6 +62,30 @@ export type MediaListResponse = {
         total: number;
     };
 }
+
+export type OpenLibraryDocument = {
+    key?: string;
+    title?: string;
+    author_name?: string[];
+    cover_i?: number;
+    edition_count?: number;
+    first_publish_year?: number;
+    subject?: string[];
+    language?: string[];
+};
+
+export type openMidia = {
+    numFound?: number;
+    start?: number;
+    numFoundExact?: boolean;
+    num_found?: number;
+    documentation_url?: string;
+    q?: string;
+    offset?: null | number;
+    docs?: OpenLibraryDocument[];
+    title?: string;
+    subject?: string[];
+};
 
 export const ratingFilterSchema = z.object({
     rating: z.coerce.number().optional(),
@@ -96,11 +120,16 @@ export type FilterMediaSchema = z.infer<typeof filterMediaSchema>;
 const baseMediaSchema = z.object({
     title: z.string(),
     type: z.enum(mediaTypes),
-    genre: z.string(),
-    description: z.string(),
+    genre: z.array(z.string()).optional(),
+    description: z.string().default(""),
     rating: z.number().optional(),
     annotation: z.string().optional(),
     status: z.enum(status),
+    authorName: z.array(z.string()).optional(),
+    coverUrl: z.string().url().optional(),
+    firstPublishYear: z.number().optional(),
+    languages: z.array(z.string()).optional(),
+    externalKey: z.string().optional(),
     finishedAt: z.coerce.date().optional(),
     createdAt: z.coerce.date().optional(),
     updatedAt: z.coerce.date().optional()
@@ -113,7 +142,14 @@ export const MediaSchema = z.object({
 
 export type MediaSchema = z.infer<typeof MediaSchema>;
 
-export const NewMediaSchema = baseMediaSchema;
+export const NewMediaSchema = z.object({
+    title: z.string(),
+    annotation: z.string().optional(),
+    type: z.enum(mediaTypes),
+    rating: z.number().optional(),
+    finishedAt: z.coerce.date().optional(),
+    status: z.enum(status),
+});
 
 export const NewMediaSchemasArray = z.array(NewMediaSchema);
 
@@ -127,7 +163,7 @@ export const UpdatedMediaSchema = z.object({
     }),
     title: z.string().optional(),
     type: z.enum(mediaTypes).optional(),
-    genre: z.string().optional(),
+    genre: z.array(z.string()).optional(),
     description: z.string().optional(),
     rating: z.number().optional(),
     annotation: z.string().optional(),

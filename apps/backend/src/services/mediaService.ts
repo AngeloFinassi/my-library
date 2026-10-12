@@ -9,8 +9,10 @@ import {
     FilterMediaSchema,
     RatingQuery,
     MediaQuery,
-    NewMediaSchemasArray
+    NewMediaSchemasArray,
+    openMidia
 } from "../types/Media.ts";
+import { searchOpenLibrary, getOpenLibraryDescription } from "./openLibrary.ts";
 
 const mediaCollection = database.collection("media");
 
@@ -59,12 +61,25 @@ const getMediaById = async (id: string): Promise<MediaSchema> => {
 };
 
 const createMedia = async (media: NewMediaSchema): Promise<MediaSchema> => {
-    const result = await mediaCollection.insertOne(media);
+    const searchResult = await searchOpenLibrary(media.title);
 
-    return MediaSchema.parse({
-        _id: result.insertedId,
-        ...media
-    });
+    if (!searchResult.docs || searchResult.docs.length === 0) {
+        throw new Error("No media found in Open Library for the provided title");
+    }
+
+    const result = converteOpenLibraryToMidia(searchResult, media);
+
+    if (result.externalKey) {
+        const description = await getOpenLibraryDescription(result.externalKey);
+
+        if (description !== undefined) {
+            result.description = description;
+        }
+    }
+
+    const parsedResult = MediaSchema.parse(result);
+    await mediaCollection.insertOne(parsedResult);
+    return parsedResult;
 };
 
 const createBulkMidia = async (mediaArray: NewMediaSchemasArray): Promise<MediaSchema[]> => {
@@ -102,6 +117,39 @@ const deleteMedia = async (id: string): Promise<DeleteMediaSchema> => {
     return DeleteMediaSchema.parse(doc);
 };
 
+
+const converteOpenLibraryToMidia = (openMidia: openMidia, midia: NewMediaSchema): MediaSchema => {
+    const doc = openMidia.docs?.[0];
+
+    if (!doc) {
+        throw new Error("No valid Open Library document found for the provided title");
+    }
+
+    const genre = subjectToGenre(doc.subject);
+    const coverUrl = typeof doc.cover_i === "number"
+        ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+        : undefined;
+
+    return MediaSchema.parse({
+        _id: new ObjectId(),
+        title: midia.title,
+        type: midia.type,
+        genre: genre.length > 0 ? genre : undefined,
+        description: "",
+        annotation: midia.annotation ?? "",
+        rating: midia.rating,
+        finishedAt: midia.finishedAt,
+        status: midia.status,
+        authorName: Array.isArray(doc.author_name) ? doc.author_name : undefined,
+        coverUrl,
+        firstPublishYear: typeof doc.first_publish_year === "number" ? doc.first_publish_year : undefined,
+        languages: Array.isArray(doc.language) ? doc.language : undefined,
+        externalKey: typeof doc.key === "string" ? doc.key : undefined,
+        createdAt: new Date(),
+        updatedAt: new Date()
+    });
+};
+
 const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
     const query: MediaQuery = {};
     const ratingFilter: RatingQuery = {};
@@ -111,9 +159,9 @@ const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
     }
 
     if (filters.genre) {
-        query.genre = filters.genre;
+        query.genre = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
     }
-    
+
     if (filters.rating !== undefined) {
         query.rating = filters.rating;
     }
@@ -171,17 +219,25 @@ const buildFilterQuery = (filters: FilterMediaSchema): MediaQuery => {
         ];
     }
 
-    if (filters.rating !== undefined) {
-        query.rating = filters.rating;
-        return query;
-    }
-
     if (ratingFilter.$gte !== undefined || ratingFilter.$lte !== undefined) {
-        query.rating = ratingFilter;
+        if (query.rating !== undefined && typeof query.rating === "number") {
+            query.rating = {
+                ...ratingFilter,
+                $gte: query.rating
+            };
+        } else {
+            query.rating = ratingFilter;
+        }
     }
 
     return query;
-}
+};
+
+const subjectToGenre = (subjects?: string[]): string[] => {
+    return (subjects ?? [])
+        .filter((subject) => subject.startsWith("genre:"))
+        .map((subject) => subject.replace(/^genre:/, ""));
+};
 
 export default {
     getMidias,
